@@ -8,7 +8,6 @@ dependencies = [
     "asyncpg>=0.30.0",
     "fastapi-cache2>=0.2.2",
     "fastapi[standard]>=0.115.4",
-    "flask>=3.0.3",
     "python-dotenv>=1.0.1",
     "uvicorn>=0.32.0",
 ]

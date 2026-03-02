@@ -7,26 +7,19 @@ dev:
 	uv run fastapi dev app/server.py --host 0.0.0.0 --port $(PORT)
 
 run:
-	uv run uvicorn --workers 4 --host 0.0.0.0 --port $(PORT) app.server:app
+	uv run uvicorn --workers 1 --host 0.0.0.0 --port $(PORT) app.server:app
 
-compose: build start
+compose-setup:
+	docker compose run --rm app make install
 
-build:
-	docker build . --tag=data-charts-api
+compose-build:
+	docker compose build
 
-start:
-	-docker stop data-charts-api || true
-	-docker rm data-charts-api || true
-	docker run -d --name data-charts-api -p $(PORT):$(PORT) data-charts-api
+compose:
+	docker compose up
 
-stop:
-	-docker stop data-charts-api || true
-
-rm:
-	-docker rm data-charts-api || true
-
-bash:
-	docker run --rm -it data-charts-api bash
+compose-bash:
+	docker compose run --rm app bash
 
 test:
 	uv run pytest
