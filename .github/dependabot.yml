@@ -1,55 +1,37 @@
----
 version: 2
 updates:
-  # === GitHub Actions ===
-  - package-ecosystem: github-actions
-    directory: /
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
-      interval: weekly
-    labels: [dependencies, automated, actions]
+      interval: "monthly"
+      time: "03:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 1
+    labels: ["dependencies", "automated"]
     groups:
-      actions-minor-patch:
+      github-actions-all:
         patterns: ["*"]
-        update-types: [minor, patch]
-      actions-major:
-        patterns: ["*"]
-        update-types: [major]
-  # === Python dev (pip) ===
-  - package-ecosystem: pip
-    directory: /
+
+  - package-ecosystem: "pip"
+    directory: "/"
     schedule:
-      interval: weekly
-    labels: [dependencies, automated, dev]
+      interval: "monthly"
+      time: "03:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 1
+    labels: ["dependencies", "automated"]
     groups:
-      pip-dev-minor-patch:
-        patterns:
-          - pytest*
-          - flake8*
-          - black
-          - isort
-          - mypy*
-          - coverage*
-          - tox*
-          - ruff
-          - pylint*
-          - bandit
-          - pre-commit
-          - sphinx*
-          - mkdocs*
-        update-types: [minor, patch]
-  # === Python runtime (pip) ===
-  - package-ecosystem: pip
-    directory: /
-    schedule:
-      interval: weekly
-    labels: [dependencies, automated, runtime]
-    groups:
-      pip-runtime-minor-patch:
+      pip-all:
         patterns: ["*"]
-        update-types: [minor, patch]
-  # === Docker ===
-  - package-ecosystem: docker
-    directory: /
+
+  - package-ecosystem: "uv"
+    directory: "/"
     schedule:
-      interval: weekly
-    labels: [dependencies, automated, docker]
+      interval: "monthly"
+      time: "03:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 1
+    labels: ["dependencies", "automated"]
+    groups:
+      uv-all:
+        patterns: ["*"]
