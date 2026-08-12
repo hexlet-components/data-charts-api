@@ -1,7 +1,7 @@
 PORT ?= 4000
 
 install:
-	uv sync
+	@uv sync
 
 dev:
 	uv run fastapi dev app/server.py --host 0.0.0.0 --port $(PORT)
@@ -27,4 +27,4 @@ test:
 lint:
 	uv run ruff check .
 
-check: lint
+check: install lint test

@@ -3,7 +3,7 @@ name = "data-charts-api"
 version = "0.1.0"
 description = "api for data charts project"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "asyncpg>=0.30.0",
     "fastapi-cache2>=0.2.2",
@@ -12,5 +12,5 @@ dependencies = [
     "uvicorn>=0.49.0",
 ]
 
-[tool.uv]
-dev-dependencies = ["pytest>=8.3.3", "requests>=2.32.3", "ruff>=0.7.2"]
+[dependency-groups]
+dev = ["pytest>=8.3.3", "requests>=2.32.3", "ruff>=0.7.2"]

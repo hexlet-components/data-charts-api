@@ -4,10 +4,36 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  deploy:
+  # Линтер появился здесь потому, что до этого workflow только собирал и пушил
+  # образ: «зависимости обновлены» ничем не подтверждалось.
+  build:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # setup-python не нужен: версию питона держит .python-version, и uv сам
+      # ставит её при первом `uv sync`. Единый источник версии, поэтому раннер
+      # и образ кита не могут разойтись.
+      - uses: astral-sh/setup-uv@v10.0.0
+
+      - name: Install
+        run: make install
+      - name: Run linter
+        run: make lint
+
+      # Тесты в CI не гоняются: test_server.py это интеграционный тест, он
+      # стучится на localhost:4000 к поднятому приложению, а данные берёт из
+      # внешней базы db.hexlet.app. Локально это `make compose` плюс `make test`.
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
 
     steps:
       - uses: actions/checkout@v7
