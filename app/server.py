@@ -23,10 +23,14 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL is not set. Define it in the environment or .env file.")
+        raise RuntimeError(
+            "DATABASE_URL is not set. "
+            "Define it in the environment or .env file."
+        )
     try:
         app.state.pool = await asyncpg.create_pool(
             DATABASE_URL,
@@ -36,13 +40,18 @@ async def lifespan(app: FastAPI):
         logging.info("Connected to database successfully")
     except Exception as e:
         logging.error(f"Failed to connect to the database: {str(e)}")
-        raise RuntimeError("Failed to connect to the database. Check DATABASE_URL and DB availability.") from e
+        raise RuntimeError(
+            "Failed to connect to the database. "
+            "Check DATABASE_URL and DB availability."
+        ) from e
     FastAPICache.init(InMemoryBackend())
     yield
     await app.state.pool.close()
 
+
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 
 async def get_db():
     async with app.state.pool.acquire() as conn:
@@ -53,8 +62,9 @@ async def get_db():
 async def index():
     return {"status": "It Works"}
 
+
 @app.get("/health")
-async def health(db = Depends(get_db)):
+async def health(db=Depends(get_db)):
     try:
         await db.execute("SELECT 1")
         return {"status": "ok", "db": "ok"}
@@ -100,7 +110,7 @@ async def stream_records(db, query: str, begin: datetime, end: datetime):
 async def get_visits(
     begin: str = Query(..., description="Start date in ISO format"),
     end: str = Query(..., description="End date in ISO format"),
-    db = Depends(get_db)
+    db=Depends(get_db)
 ):
     begin = datetime.fromisoformat(begin)
     end = datetime.fromisoformat(end)
@@ -118,11 +128,12 @@ async def get_visits(
             detail="Internal server error occurred while fetching visits"
         )
 
+
 @app.get("/registrations")
 async def get_registrations(
     begin: str = Query(..., description="Start date in ISO format"),
     end: str = Query(..., description="End date in ISO format"),
-    db = Depends(get_db)
+    db=Depends(get_db)
 ):
     begin = datetime.fromisoformat(begin)
     end = datetime.fromisoformat(end)
