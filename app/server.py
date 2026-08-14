@@ -10,8 +10,6 @@ import json
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import StreamingResponse
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.inmemory import InMemoryBackend
 
 load_dotenv()
 
@@ -53,7 +51,6 @@ async def lifespan(app: FastAPI):
             "Failed to connect to the database. "
             "Check DATABASE_URL and DB availability."
         ) from e
-    FastAPICache.init(InMemoryBackend())
     yield
     await app.state.pool.close()
 
