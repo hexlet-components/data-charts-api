@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 import json
 
 from fastapi import Depends, FastAPI, HTTPException, Query
-from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi_cache import FastAPICache
@@ -17,6 +16,16 @@ from fastapi_cache.backends.inmemory import InMemoryBackend
 load_dotenv()
 
 DATABASE_URL = os.getenv('DATABASE_URL')
+
+# Сколько строк курсор забирает из базы за один заход. По умолчанию asyncpg
+# берёт 50, и месячная выборка в 46 тысяч строк превращается в 900 с лишним
+# обращений к базе вместо полусотни: время ответа определяется задержкой сети,
+# а не объёмом данных.
+CURSOR_PREFETCH = 1000
+
+# Записи склеиваются перед отправкой. Иначе каждая строка уходит клиенту
+# отдельным чанком, и на годовой выборке это четверть миллиона чанков.
+CHUNK_SIZE = 1000
 
 logging.basicConfig(
     level=logging.INFO,
@@ -73,6 +82,17 @@ async def health(db=Depends(get_db)):
         raise HTTPException(status_code=503, detail="Database unavailable")
 
 
+def encode_datetime(value):
+    # Единственный тип в обеих таблицах, который json не сериализует сам.
+    # Формат тот же, что давал jsonable_encoder, но втрое дешевле: тот
+    # рекурсивно обходит значение и разбирает его тип на каждой записи.
+    if isinstance(value, datetime):
+        return value.isoformat()
+    raise TypeError(
+        f"Object of type {type(value).__name__} is not JSON serializable"
+    )
+
+
 async def stream_records(db, query: str, begin: datetime, end: datetime):
     async def generator():
         # Скобки закрываются ровно один раз, в нормальном потоке. Прежний
@@ -82,15 +102,21 @@ async def stream_records(db, query: str, begin: datetime, end: datetime):
         try:
             yield "["
             first = True
+            chunk = []
             async with db.transaction():
-                cursor = db.cursor(query, begin, end)
+                cursor = db.cursor(query, begin, end, prefetch=CURSOR_PREFETCH)
                 async for record in cursor:
-                    payload = json.dumps(
-                        jsonable_encoder(dict(record)),
+                    chunk.append(json.dumps(
+                        dict(record),
                         separators=(",", ":"),
-                    )
-                    yield payload if first else "," + payload
-                    first = False
+                        default=encode_datetime,
+                    ))
+                    if len(chunk) >= CHUNK_SIZE:
+                        yield ("" if first else ",") + ",".join(chunk)
+                        first = False
+                        chunk.clear()
+            if chunk:
+                yield ("" if first else ",") + ",".join(chunk)
             yield "]"
         except Exception as e:
             # Массив намеренно остаётся незакрытым: оборванный поток должен
