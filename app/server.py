@@ -75,33 +75,29 @@ async def health(db=Depends(get_db)):
 
 async def stream_records(db, query: str, begin: datetime, end: datetime):
     async def generator():
+        # Скобки закрываются ровно один раз, в нормальном потоке. Прежний
+        # вариант закрывал массив в finally, и на пустом диапазоне к уже
+        # отданному "[]" добавлялась вторая скобка: ответ "[]]" не разбирался
+        # как JSON вообще.
         try:
+            yield "["
+            first = True
             async with db.transaction():
                 cursor = db.cursor(query, begin, end)
-                iterator = cursor.__aiter__()
-                try:
-                    first_record = await iterator.__anext__()
-                except StopAsyncIteration:
-                    yield "[]"
-                    return
-
-                payload = json.dumps(
-                    jsonable_encoder(dict(first_record)),
-                    separators=(",", ":"),
-                )
-                yield "[" + payload
-
-                async for record in iterator:
+                async for record in cursor:
                     payload = json.dumps(
                         jsonable_encoder(dict(record)),
                         separators=(",", ":"),
                     )
-                    yield "," + payload
+                    yield payload if first else "," + payload
+                    first = False
+            yield "]"
         except Exception as e:
+            # Массив намеренно остаётся незакрытым: оборванный поток должен
+            # быть виден клиенту как битый JSON. Валидный короткий массив
+            # неотличим от полного ответа, и часть данных теряется молча.
             logging.error(f"Error streaming records: {str(e)}")
             raise
-        finally:
-            yield "]"
 
     return StreamingResponse(generator(), media_type="application/json")
 
