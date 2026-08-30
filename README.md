@@ -1,6 +1,6 @@
 # API for charts-project
 
-https://data-charts-api.hexlet.app/
+<https://data-charts-api.hexlet.app/>
 
 ## Commands
 
