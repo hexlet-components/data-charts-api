@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 
 load_dotenv()
 
-DATABASE_URL = os.getenv('DATABASE_URL')
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Сколько строк курсор забирает из базы за один заход. По умолчанию asyncpg
 # берёт 50, и месячная выборка в 46 тысяч строк превращается в 900 с лишним
@@ -40,9 +40,7 @@ async def lifespan(app: FastAPI):
         )
     try:
         app.state.pool = await asyncpg.create_pool(
-            DATABASE_URL,
-            min_size=5,
-            max_size=20
+            DATABASE_URL, min_size=5, max_size=20
         )
         logging.info("Connected to database successfully")
     except Exception as e:
@@ -103,11 +101,13 @@ async def stream_records(db, query: str, begin: datetime, end: datetime):
             async with db.transaction():
                 cursor = db.cursor(query, begin, end, prefetch=CURSOR_PREFETCH)
                 async for record in cursor:
-                    chunk.append(json.dumps(
-                        dict(record),
-                        separators=(",", ":"),
-                        default=encode_datetime,
-                    ))
+                    chunk.append(
+                        json.dumps(
+                            dict(record),
+                            separators=(",", ":"),
+                            default=encode_datetime,
+                        )
+                    )
                     if len(chunk) >= CHUNK_SIZE:
                         yield ("" if first else ",") + ",".join(chunk)
                         first = False
@@ -129,22 +129,22 @@ async def stream_records(db, query: str, begin: datetime, end: datetime):
 async def get_visits(
     begin: str = Query(..., description="Start date in ISO format"),
     end: str = Query(..., description="End date in ISO format"),
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
-    begin = datetime.fromisoformat(begin)
-    end = datetime.fromisoformat(end)
+    begin_at = datetime.fromisoformat(begin)
+    end_at = datetime.fromisoformat(end)
     try:
         query = """
             SELECT *
             FROM visits
             WHERE visits.datetime BETWEEN $1 AND $2
         """
-        return await stream_records(db, query, begin, end)
+        return await stream_records(db, query, begin_at, end_at)
     except Exception as e:
         logging.error(f"Error fetching visits: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="Internal server error occurred while fetching visits"
+            detail="Internal server error occurred while fetching visits",
         )
 
 
@@ -152,20 +152,22 @@ async def get_visits(
 async def get_registrations(
     begin: str = Query(..., description="Start date in ISO format"),
     end: str = Query(..., description="End date in ISO format"),
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
-    begin = datetime.fromisoformat(begin)
-    end = datetime.fromisoformat(end)
+    begin_at = datetime.fromisoformat(begin)
+    end_at = datetime.fromisoformat(end)
     try:
         query = """
             SELECT *
             FROM registrations
             WHERE registrations.datetime BETWEEN $1 AND $2
         """
-        return await stream_records(db, query, begin, end)
+        return await stream_records(db, query, begin_at, end_at)
     except Exception as e:
         logging.error(f"Error fetching registrations: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="Internal server error occurred while fetching registrations"
+            detail=(
+                "Internal server error occurred while fetching registrations"
+            ),
         )
